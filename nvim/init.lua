@@ -405,7 +405,7 @@ require("lazy").setup({
                     cpp = { "clang-format" },
                     python = { "black" },
                     lua = { "stylua" },
-                    zig = { "zigfmt" },
+                    zig = { "zig fmt" },
                 },
                 format_on_save = { timeout_ms = 500, lsp_fallback = true },
             })
