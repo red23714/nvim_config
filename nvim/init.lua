@@ -288,6 +288,7 @@ require("lazy").setup({
 					capabilities = capabilities,
 				},
 				lua_ls = {
+					cmd = { "lua-language-server" },
 					capabilities = capabilities,
 					settings = {
 						Lua = {
@@ -430,6 +431,12 @@ require("lazy").setup({
 			require("bufferline").setup({})
 			vim.keymap.set("n", "<Tab>", ":BufferLineCycleNext<CR>", { noremap = true, silent = true })
 			vim.keymap.set("n", "<C-Tab>", ":BufferLineCyclePrev<CR>", { noremap = true, silent = true })
+			vim.keymap.set(
+				"n",
+				"<leader>x",
+				":bd<CR>",
+				{ noremap = true, silent = true, desc = "Закрыть вкладку" }
+			)
 		end,
 	},
 
@@ -463,16 +470,36 @@ require("lazy").setup({
 -- ===========================
 --         ДОПОЛНИТЕЛЬНО
 -- ===========================
-vim.cmd("colorscheme tokyonight")
+vim.cmd("colorscheme onedark")
 
--- Смена темы Space + t + h
+-- Смена темы: <Space> + t + h
 vim.keymap.set("n", "<leader>th", function()
 	local themes = { "tokyonight", "gruvbox", "onedark" }
-	local current = vim.g.colors_name
-	local next_index = (vim.fn.index(themes, current) + 1) % #themes + 1
-	vim.cmd("colorscheme " .. themes[next_index])
-	print("Тема: " .. themes[next_index])
-end, { noremap = true, silent = true })
+
+	-- Находим текущую тему
+	local current = vim.g.colors_name or ""
+	local current_index = vim.fn.index(themes, current)
+
+	-- Если текущая тема не из списка — начинаем с первой
+	if current_index == -1 then
+		current_index = 0
+	end
+
+	-- Зацикленное переключение
+	local next_index = (current_index + 1) % #themes
+	local next_theme = themes[next_index + 1] -- Lua использует индексацию с 1
+
+	-- Пробуем применить тему
+	local ok, err = pcall(vim.cmd, "colorscheme " .. next_theme)
+	if ok then
+		vim.notify("🌈 Тема переключена на: " .. next_theme, vim.log.levels.INFO)
+	else
+		vim.notify(
+			"Ошибка при применении темы: " .. next_theme .. "\n" .. err,
+			vim.log.levels.ERROR
+		)
+	end
+end, { noremap = true, silent = true, desc = "Сменить тему" })
 
 -- Форматирование Ctrl + s
 vim.keymap.set("n", "<C-s>", function()
