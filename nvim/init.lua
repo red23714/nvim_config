@@ -57,6 +57,48 @@ require("lazy").setup({
         end
     },
 
+    -- ======== КОММЕНТАРИИ ========
+    {
+        'numToStr/Comment.nvim',
+        opts = {
+            -- Конфигурация по умолчанию
+            padding = true,          -- Добавлять пробел после комментария
+            sticky = true,           -- Курсор остается на месте после комментирования
+            ignore = nil,            -- Регулярные выражения для игнорирования
+            toggler = {
+                line = 'gcc',        -- Комментирование одной строки
+                block = 'gbc',       -- Комментирование блока
+            },
+            opleader = {
+                line = 'gc',         -- Комментирование в визуальном режиме
+                block = 'gb',        -- Комментирование блока в визуальном режиме
+            },
+            extra = {
+                above = 'gcO',       -- Добавить комментарий выше
+                below = 'gco',       -- Добавить комментарий ниже
+                eol = 'gcA',         -- Добавить комментарий в конец строки
+            },
+            mappings = {
+                basic = true,        -- Включить базовые маппинги
+                extra = true,        -- Включить дополнительные маппинги
+            },
+        },
+        config = function()
+            require('Comment').setup()
+            
+            -- Кастомные маппинги для Space + /
+            vim.keymap.set('n', '<leader>/', function()
+                require('Comment.api').toggle.linewise.current()
+            end, { desc = 'Комментировать строку' })
+            
+            vim.keymap.set('v', '<leader>/', function()
+                local esc = vim.api.nvim_replace_termcodes('<ESC>', true, false, true)
+                vim.api.nvim_feedkeys(esc, 'nx', false)
+                require('Comment.api').toggle.linewise(vim.fn.visualmode())
+            end, { desc = 'Комментировать выделение' })
+        end
+    },
+
     -- ======== ФАЙЛОВЫЙ БРАУЗЕР ========
     {
         'nvim-tree/nvim-tree.lua',
