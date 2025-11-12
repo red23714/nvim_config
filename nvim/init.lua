@@ -143,35 +143,101 @@ require("lazy").setup({
                     { name = 'buffer' },
                     { name = 'path' },
                 }),
+                -- ДОБАВЬТЕ ЭТОТ БЛОК ДЛЯ СТИЛЕЙ ОКОН:
+                window = {
+                    completion = {
+                        border = "rounded",
+                        winhighlight = "Normal:NormalFloat,FloatBorder:FloatBorder,Search:None",
+                        scrollbar = true,
+                    },
+                    documentation = {
+                        border = "rounded",
+                        winhighlight = "Normal:NormalFloat,FloatBorder:FloatBorder,Search:None",
+                        scrollbar = true,
+                        max_width = 80,
+                        max_height = 20,
+                    },
+                },
+                formatting = {
+                    fields = { "kind", "abbr", "menu" },
+                    format = function(entry, vim_item)
+                        local kind_icons = {
+                            Text = "",
+                            Method = "󰆧",
+                            Function = "󰊕",
+                            Constructor = "",
+                            Field = "󰇽",
+                            Variable = "󰂡",
+                            Class = "󰠱",
+                            Interface = "",
+                            Module = "",
+                            Property = "󰜢",
+                            Unit = "",
+                            Value = "󰎠",
+                            Enum = "",
+                            Keyword = "󰌋",
+                            Snippet = "",
+                            Color = "󰏘",
+                            File = "󰈙",
+                            Reference = "",
+                            Folder = "󰉋",
+                            EnumMember = "",
+                            Constant = "󰏿",
+                            Struct = "",
+                            Event = "",
+                            Operator = "󰆕",
+                            TypeParameter = "󰅲",
+                        }
+                        
+                        vim_item.kind = string.format('%s %s', kind_icons[vim_item.kind], vim_item.kind)
+                        vim_item.menu = ({
+                            nvim_lsp = "[LSP]",
+                            luasnip = "[Snippet]",
+                            buffer = "[Buffer]",
+                            path = "[Path]",
+                        })[entry.source.name]
+                        
+                        return vim_item
+                    end,
+                },
             })
+
+            -- Стили для окон автодополнения
+            vim.cmd([[
+                highlight! NormalFloat guibg=#1a1b26
+                highlight! FloatBorder guifg=#7aa2f7 guibg=#1a1b26
+                highlight! PmenuSel guibg=#283457
+            ]])
         end
     },
 
     -- ======== LSP (СМАРТ-ПРОЕКТЫ) ========
     {
         'neovim/nvim-lspconfig',
+        dependencies = {
+            'williamboman/mason.nvim',
+            'williamboman/mason-lspconfig.nvim',
+            'hrsh7th/cmp-nvim-lsp'
+        },
         config = function()
-            local lspconfig = require('lspconfig')
+            -- Настройка Mason
+            require("mason").setup()
+            require("mason-lspconfig").setup({
+                automatic_installation = true,
+            })
+
             local capabilities = require('cmp_nvim_lsp').default_capabilities()
-            local util = require('lspconfig.util')
 
-            local function get_root_dir(fname)
-                return util.root_pattern(
-                    'CMakeLists.txt',
-                    'compile_commands.json',
-                    'pyproject.toml',
-                    'setup.py',
-                    'requirements.txt',
-                    'build.zig',
-                    '.venv',
-                    '.git'
-                )(fname) or vim.loop.cwd()
-            end
-
+            -- Настройка LSP серверов через новый API vim.lsp.start
             local servers = {
-                clangd = {},
-                pyright = {},
+                clangd = {
+                    capabilities = capabilities,
+                },
+                pyright = {
+                    capabilities = capabilities,
+                },
                 lua_ls = {
+                    capabilities = capabilities,
                     settings = {
                         Lua = {
                             diagnostics = { globals = { 'vim' } },
@@ -179,17 +245,92 @@ require("lazy").setup({
                         }
                     }
                 },
-                zls = {},
+                zls = {
+                    capabilities = capabilities,
+                },
             }
 
-            for name, conf in pairs(servers) do
-                conf.capabilities = capabilities
-                conf.root_dir = get_root_dir
-                conf.flags = { debounce_text_changes = 300 }
+            -- Автоматический запуск LSP серверов при открытии файлов
+            vim.api.nvim_create_autocmd("FileType", {
+                pattern = { "c", "cpp", "python", "lua", "zig" },
+                callback = function(args)
+                    local bufnr = args.buf
+                    local ft = vim.bo[bufnr].filetype
+                    
+                    -- Соответствие типов файлов и LSP серверов
+                    local servers_by_ft = {
+                        c = "clangd",
+                        cpp = "clangd", 
+                        python = "pyright",
+                        lua = "lua_ls",
+                        zig = "zls"
+                    }
+                    
+                    local server_name = servers_by_ft[ft]
+                    if server_name and servers[server_name] then
+                        -- Используем новый API vim.lsp.start
+                        vim.lsp.start({
+                            name = server_name,
+                            bufnr = bufnr,
+                            capabilities = servers[server_name].capabilities,
+                            settings = servers[server_name].settings,
+                            root_dir = vim.fs.dirname(vim.fs.find({
+                                'CMakeLists.txt',
+                                'compile_commands.json',
+                                'pyproject.toml',
+                                'setup.py',
+                                'requirements.txt',
+                                'build.zig',
+                                '.git'
+                            }, { upward = true })[1] or vim.loop.cwd()),
+                        })
+                    end
+                end,
+            })
 
-                -- Настройка через lspconfig (правильный способ)
-                lspconfig[name].setup(conf)
-            end
+            -- Ручной запуск LSP для уже открытых буферов
+            vim.api.nvim_create_autocmd("VimEnter", {
+                callback = function()
+                    for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+                        if vim.api.nvim_buf_is_loaded(bufnr) then
+                            local ft = vim.api.nvim_buf_get_option(bufnr, 'filetype')
+                            local servers_by_ft = {
+                                c = "clangd",
+                                cpp = "clangd", 
+                                python = "pyright",
+                                lua = "lua_ls",
+                                zig = "zls"
+                            }
+                            
+                            local server_name = servers_by_ft[ft]
+                            if server_name and servers[server_name] then
+                                vim.lsp.start({
+                                    name = server_name,
+                                    bufnr = bufnr,
+                                    capabilities = servers[server_name].capabilities,
+                                    settings = servers[server_name].settings,
+                                    root_dir = vim.fs.dirname(vim.fs.find({
+                                        'CMakeLists.txt',
+                                        'compile_commands.json',
+                                        'pyproject.toml',
+                                        'setup.py',
+                                        'requirements.txt',
+                                        'build.zig',
+                                        '.git'
+                                    }, { upward = true })[1] or vim.loop.cwd()),
+                                })
+                            end
+                        end
+                    end
+                end,
+            })
+
+            -- Клавиши для LSP
+            vim.keymap.set('n', 'gd', vim.lsp.buf.definition, { desc = 'Перейти к определению' })
+            vim.keymap.set('n', 'gr', vim.lsp.buf.references, { desc = 'Найти ссылки' })
+            vim.keymap.set('n', 'K', vim.lsp.buf.hover, { desc = 'Показать документацию' })
+            vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename, { desc = 'Переименовать' })
+            vim.keymap.set('n', '<leader>ca', vim.lsp.buf.code_action, { desc = 'Код действия' })
 
             -- Ошибки только при наведении
             vim.diagnostic.config({
