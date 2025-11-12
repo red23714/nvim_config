@@ -160,19 +160,24 @@ require("lazy").setup({
                 mapping = cmp.mapping.preset.insert({
                     ['<CR>'] = cmp.mapping.confirm({ select = true }),
                     ['<Tab>'] = cmp.mapping(function(fallback)
-                        if luasnip.jumpable(1) then
-                            luasnip.jump(1)
-                        elseif cmp.visible() then
+                        local col = vim.fn.col('.') - 1
+                        if cmp.visible() then
                             cmp.select_next_item()
+                        elseif luasnip.expand_or_jumpable() then
+                            luasnip.expand_or_jump()
+                        elseif col == 0 or vim.fn.getline('.'):sub(col, col):match('%s') then
+                            -- Если в начале строки или перед курсором пробел, вставляем таб
+                            vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<Tab>', true, false, true), 'n', true)
                         else
                             fallback()
                         end
                     end, { 'i', 's' }),
+
                     ['<S-Tab>'] = cmp.mapping(function(fallback)
-                        if luasnip.jumpable(-1) then
-                            luasnip.jump(-1)
-                        elseif cmp.visible() then
+                        if cmp.visible() then
                             cmp.select_prev_item()
+                        elseif luasnip.jumpable(-1) then
+                            luasnip.jump(-1)
                         else
                             fallback()
                         end
