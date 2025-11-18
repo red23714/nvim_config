@@ -12,7 +12,6 @@ vim.opt.cursorline = true
 vim.opt.mouse = "a"
 vim.opt.updatetime = 300
 vim.opt.clipboard = "unnamedplus" -- общий буфер обмена (Arch/Ubuntu)
-
 -- ===========================
 --         АВТОУСТАНОВКА LAZY.NVIM
 -- ===========================
@@ -29,9 +28,9 @@ vim.opt.rtp:prepend(lazypath)
 require("lazy").setup({
 
 	-- ======== ТЕМЫ ========
-	{ "folke/tokyonight.nvim", priority = 1000 },
-	{ "ellisonleao/gruvbox.nvim", priority = 900 },
-	{ "navarasu/onedark.nvim", priority = 800 },
+	{ "folke/tokyonight.nvim", priority = 900 },
+	{ "catppuccin/nvim", name = "catppuccin", priority = 1000 },
+	{ "olimorris/onedarkpro.nvim", priority = 1000 },
 
 	-- В lazy.nvim
 	{
@@ -75,7 +74,7 @@ require("lazy").setup({
 			},
 			extra = {
 				above = "gcO", -- Добавить комментарий выше
-				below = "gco", -- Добавить комментарий ниже
+				below = "gco", -- Добавить комментарий нижеrmehri01/onenord.nvim
 				eol = "gcA", -- Добавить комментарий в конец строки
 			},
 			mappings = {
@@ -251,14 +250,11 @@ require("lazy").setup({
 						return vim_item
 					end,
 				},
+				view = {
+					entries = { name = "custom", selection_order = "near_cursor" },
+				},
+				preselect = cmp.PreselectMode.Item,
 			})
-
-			-- Стили для окон автодополнения
-			vim.cmd([[
-                highlight! NormalFloat guibg=#1a1b26
-                highlight! FloatBorder guifg=#7aa2f7 guibg=#1a1b26
-                highlight! PmenuSel guibg=#283457
-            ]])
 		end,
 	},
 
@@ -465,16 +461,31 @@ require("lazy").setup({
 			})
 		end,
 	},
+	-- ======== ТЕРМИНАЛ ========
+	{
+		"akinsho/toggleterm.nvim",
+		version = "*",
+		config = function()
+			require("toggleterm").setup({
+				open_mapping = [[<A-h>]],
+				direction = "horizontal",
+				size = 15,
+				shade_terminals = false,
+				persist_size = true,
+				close_on_exit = true,
+			})
+		end,
+	},
 })
 
 -- ===========================
 --         ДОПОЛНИТЕЛЬНО
 -- ===========================
-vim.cmd("colorscheme onedark")
+vim.cmd("colorscheme onedark_vivid")
 
 -- Смена темы: <Space> + t + h
 vim.keymap.set("n", "<leader>th", function()
-	local themes = { "tokyonight", "gruvbox", "onedark" }
+	local themes = { "tokyonight", "onedark_vivid", "catppuccin" }
 
 	-- Находим текущую тему
 	local current = vim.g.colors_name or ""
