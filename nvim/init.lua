@@ -277,9 +277,17 @@ require("lazy").setup({
 
 			-- Настройка LSP серверов через новый API vim.lsp.start
 			local servers = {
+
 				clangd = {
 					capabilities = capabilities,
+					cmd = {
+						"clangd",
+						"--inlay-hints=true",
+						"--inlay-hints-parameter-names=true",
+						"--inlay-hints-deduced-types=true",
+					},
 				},
+
 				pyright = {
 					capabilities = capabilities,
 				},
@@ -293,10 +301,30 @@ require("lazy").setup({
 						},
 					},
 				},
+
 				zls = {
 					capabilities = capabilities,
+					settings = {
+						zls = {
+							enable_inlay_hints = true,
+							inlay_hints_show_parameter_name = true,
+							inlay_hints_show_variable_type = true,
+						},
+					},
 				},
 			}
+
+			-- Включаем Inlay Hints если сервер поддерживает
+			vim.api.nvim_create_autocmd("LspAttach", {
+				callback = function(args)
+					local client = vim.lsp.get_client_by_id(args.data.client_id)
+					local bufnr = args.buf
+
+					if client and client.server_capabilities.inlayHintProvider then
+						vim.lsp.inlay_hint.enable(true, { bufnr = bufnr })
+					end
+				end,
+			})
 
 			-- Автоматический запуск LSP серверов при открытии файлов
 			vim.api.nvim_create_autocmd("FileType", {
