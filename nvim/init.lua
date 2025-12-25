@@ -28,8 +28,6 @@ vim.opt.rtp:prepend(lazypath)
 require("lazy").setup({
 
 	-- ======== ТЕМЫ ========
-	{ "folke/tokyonight.nvim", priority = 900 },
-	{ "catppuccin/nvim", name = "catppuccin", priority = 1000 },
 	{ "olimorris/onedarkpro.nvim", priority = 1000 },
 
 	-- В lazy.nvim
@@ -474,7 +472,6 @@ require("lazy").setup({
 		config = function()
 			require("lualine").setup({
 				options = {
-					theme = "tokyonight",
 					section_separators = "",
 					component_separators = "",
 				},
@@ -504,41 +501,29 @@ require("lazy").setup({
 			})
 		end,
 	},
+
+	{ "rafi/awesome-vim-colorschemes" },
+
+	-- ======== THEMERY (ПЕРЕКЛЮЧЕНИЕ ТЕМ) ========
+
+	{
+		"zaldih/themery.nvim",
+		config = function()
+			-- Получаем все доступные colorscheme
+			local schemes = vim.fn.getcompletion("", "color")
+
+			require("themery").setup({
+				themes = schemes,
+				livePreview = true,
+			})
+		end,
+	},
 })
 
 -- ===========================
 --         ДОПОЛНИТЕЛЬНО
 -- ===========================
-vim.cmd("colorscheme onedark_vivid")
-
--- Смена темы: <Space> + t + h
-vim.keymap.set("n", "<leader>th", function()
-	local themes = { "tokyonight", "onedark_vivid", "catppuccin" }
-
-	-- Находим текущую тему
-	local current = vim.g.colors_name or ""
-	local current_index = vim.fn.index(themes, current)
-
-	-- Если текущая тема не из списка — начинаем с первой
-	if current_index == -1 then
-		current_index = 0
-	end
-
-	-- Зацикленное переключение
-	local next_index = (current_index + 1) % #themes
-	local next_theme = themes[next_index + 1] -- Lua использует индексацию с 1
-
-	-- Пробуем применить тему
-	local ok, err = pcall(vim.cmd, "colorscheme " .. next_theme)
-	if ok then
-		vim.notify("🌈 Тема переключена на: " .. next_theme, vim.log.levels.INFO)
-	else
-		vim.notify(
-			"Ошибка при применении темы: " .. next_theme .. "\n" .. err,
-			vim.log.levels.ERROR
-		)
-	end
-end, { noremap = true, silent = true, desc = "Сменить тему" })
+vim.keymap.set("n", "<leader>tt", "<cmd>Themery<CR>", { desc = "Выбор темы" })
 
 -- Форматирование Ctrl + s
 vim.keymap.set("n", "<C-s>", function()
