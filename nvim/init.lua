@@ -28,6 +28,7 @@ vim.opt.rtp:prepend(lazypath)
 require("lazy").setup({
 
 	-- ======== ТЕМЫ ========
+	{ "folke/tokyonight.nvim", priority = 900 },
 	{ "olimorris/onedarkpro.nvim", priority = 1000 },
 
 	-- В lazy.nvim
@@ -472,6 +473,7 @@ require("lazy").setup({
 		config = function()
 			require("lualine").setup({
 				options = {
+					theme = "tokyonight",
 					section_separators = "",
 					component_separators = "",
 				},
@@ -493,38 +495,99 @@ require("lazy").setup({
 		config = function()
 			require("toggleterm").setup({
 				open_mapping = [[<A-h>]],
-				direction = "horizontal",
-				size = 15,
-				shade_terminals = false,
-				persist_size = true,
+				direction = "float",
 				close_on_exit = true,
+				persist_size = true,
+
+				float_opts = {
+					border = "rounded", -- single | double | shadow | rounded
+					width = function()
+						return math.floor(vim.o.columns * 0.85)
+					end,
+					height = function()
+						return math.floor(vim.o.lines * 0.75)
+					end,
+					winblend = 0, -- если хочешь прозрачность: 5–15
+				},
 			})
 		end,
 	},
 
 	{ "rafi/awesome-vim-colorschemes" },
+})
 
-	-- ======== THEMERY (ПЕРЕКЛЮЧЕНИЕ ТЕМ) ========
+vim.keymap.set("n", "<leader>tt", function()
+	require("telescope.builtin").colorscheme({
+		enable_preview = true,
+	})
+end, { desc = "Выбор темы (Telescope)" })
 
-	{
-		"zaldih/themery.nvim",
-		config = function()
-			-- Получаем все доступные colorscheme
-			local schemes = vim.fn.getcompletion("", "color")
+-- ===========================
+--   СОХРАНЕНИЕ ЦВЕТОВОЙ ТЕМЫ
+-- ===========================
 
-			require("themery").setup({
-				themes = schemes,
-				livePreview = true,
-			})
-		end,
-	},
+local theme_file = vim.fn.stdpath("config") .. "/.last_colorscheme"
+
+-- При смене темы — сохраняем
+vim.api.nvim_create_autocmd("ColorScheme", {
+	callback = function()
+		local theme = vim.g.colors_name
+		if theme then
+			local f = io.open(theme_file, "w")
+			if f then
+				f:write(theme)
+				f:close()
+			end
+		end
+	end,
+})
+
+-- При старте — загружаем сохранённую тему
+vim.api.nvim_create_autocmd("VimEnter", {
+	once = true,
+	callback = function()
+		local f = io.open(theme_file, "r")
+		if f then
+			local theme = f:read("*l")
+			f:close()
+			if theme and theme ~= "" then
+				pcall(vim.cmd, "colorscheme " .. theme)
+			end
+		end
+	end,
+})
+
+-- ===========================
+--   FLOATING TERMINAL STYLE
+-- ===========================
+
+local function style_terminal()
+	-- фон терминала
+	vim.api.nvim_set_hl(0, "ToggleTermNormal", {
+		bg = "#0f1117", -- нейтральный тёмный
+	})
+
+	-- рамка
+	vim.api.nvim_set_hl(0, "ToggleTermBorder", {
+		fg = "#5e81ac", -- холодный акцент
+	})
+
+	-- на всякий случай
+	vim.api.nvim_set_hl(0, "NormalFloat", {
+		bg = "#0f1117",
+	})
+end
+
+style_terminal()
+
+-- если вдруг тема перезаписывает — вернём обратно
+vim.api.nvim_create_autocmd("ColorScheme", {
+	callback = style_terminal,
 })
 
 -- ===========================
 --         ДОПОЛНИТЕЛЬНО
 -- ===========================
-vim.keymap.set("n", "<leader>tt", "<cmd>Themery<CR>", { desc = "Выбор темы" })
-
 -- Форматирование Ctrl + s
 vim.keymap.set("n", "<C-s>", function()
 	require("conform").format({ async = true })
